@@ -1093,20 +1093,20 @@ def displayErrorsOverlay(json_out,date):
            return [alias_str,iav]
 
     displaydateFlag = False
-    col_names = ['VSAN|Initiator|Target|LUN', 'Total SCSI Failures', 'Total FC Aborts']
-    col_names_desc = ['', 'Read | Write', 'Read | Write']
+    col_names = ['VSAN|Initiator|Target|LUN', 'Total SCSI Failures', 'Total FC Aborts' , 'Total Timeouts']
+    col_names_desc = ['', 'Read | Write', 'Read | Write', 'Read | Write']
     col_values = []
     metrics = []
     cols = ''
     vals = ''
     vsan,initiator,lun,target = '','','',''
-    max_failures,max_aborts=0,0
+    max_failures,max_aborts,max_timeouts=0,0,0
     sizeJson = len(json_out['values'])
     counter = 1
     while counter <= sizeJson:
         a = ''
-        failR, abortsR = 0, 0
-        failW, abortsW = 0, 0
+        failR, abortsR, timeoutsR = 0, 0, 0
+        failW, abortsW, timeoutsW = 0, 0, 0
         for key,value in json_out['values'][str(counter)].iteritems():
             #print key,value
             if str(key) == 'port':
@@ -1127,13 +1127,18 @@ def displayErrorsOverlay(json_out,date):
                 failR = int(value)
             if str(key) == 'write_io_failures' and value != 0:
                 failW = int(value)
+            if str(key) == 'read_io_timeouts' and value != 0:
+                timeoutsR = int(value)
+            if str(key) == 'write_io_timeouts' and value != 0:
+                timeoutsW = int(value)
         counter = counter + 1
         #for errorsonly
-        if args.errors or (failR != 0 or failW != 0 or abortsR != 0 or abortsW != 0 ):
+        if args.errors or (failR != 0 or failW != 0 or abortsR != 0 or abortsW != 0 or timeoutsR != 0 or timeoutsW != 0):
             a = str(port) + '::' + str(vsan) + '::' + str(initiator) + '::' + str(target) + '::' + str(lun) \
-                    + '::' + str(failR) + '::' + str(failW) + '::' + str(abortsR) + '::' + str(abortsW)
+                    + '::' + str(failR) + '::' + str(failW) + '::' + str(abortsR) + '::' + str(abortsW) + '::' + str(timeoutsR) + '::' + str(timeoutsW)
             max_failures=max(max_failures,failR,failW)
             max_aborts=max(max_aborts,abortsR,abortsW)
+            max_timeouts=max(max_timeouts,timeoutsR,timeoutsW)
             if args.alias:
                 ali_str,tisAliasValid = alias_maker(initiator,target,fcid2pwwn,pwwn2alias,vsan)
                 max_init_alias_len,max_targ_alias_len = [max(aa,bb) for aa,bb in zip([len(i) for i in ali_str.split('::')[1:]],(max_init_alias_len,max_targ_alias_len))]
@@ -1168,11 +1173,12 @@ def displayErrorsOverlay(json_out,date):
     #aligning o/p
     failure_width = len(str(max_failures))+2
     abort_width = len(str(max_aborts))+2
+    timeout_width = len(str(max_timeouts))+2
 
     for port in sorted(port_metrics,key= lambda x: tuple([int(i) for i in x[2:].split('/')])):
         t = PrettyTable(col_names)
         t.add_row(col_names_desc)
-        col_names_empty = ['', '', '', '', ''] if args.alias else ['', '', '']
+        col_names_empty = ['', '', '', '', ''] if args.alias else ['', '', '', '']
         t.add_row(col_names_empty)
         #t.align = "l"
 
@@ -1185,8 +1191,9 @@ def displayErrorsOverlay(json_out,date):
             col_values.append(cols)
             col_values.append("{0:^{width}}|{1:^{width}}".format(parts[5],parts[6],width=failure_width))
             col_values.append("{0:^{width}}|{1:^{width}}".format(parts[7],parts[8],width=abort_width))
+            col_values.append("{0:^{width}}|{1:^{width}}".format(parts[9],parts[10],width=timeout_width))
             if args.alias:
-                col_values.extend([str(parts[9]),str(parts[10])])
+                col_values.extend([str(parts[11]),str(parts[12])])
             t.add_row(col_values)
         print t
 
@@ -1908,13 +1915,13 @@ def getData(args,misc=None) :
             query = "select port, vsan, initiator_id, target_id, lun, read_io_rate, write_io_rate, read_io_bandwidth, write_io_bandwidth, read_io_size_min, read_io_size_max, total_time_metric_based_read_io_bytes, total_time_metric_based_read_io_count, write_io_size_min, write_io_size_max, total_time_metric_based_write_io_bytes, total_time_metric_based_write_io_count, read_io_initiation_time_min, read_io_initiation_time_max, total_read_io_initiation_time, write_io_initiation_time_min, write_io_initiation_time_max, total_write_io_initiation_time, read_io_completion_time_min, read_io_completion_time_max, total_read_io_time, write_io_completion_time_min, write_io_completion_time_max, total_write_io_time, read_io_inter_gap_time_min, read_io_inter_gap_time_max, total_read_io_inter_gap_time, write_io_inter_gap_time_min, write_io_inter_gap_time_max, total_write_io_inter_gap_time from fc-scsi.scsi_initiator_itl_flow"
         else :
             if args.minmax:
-                query = "select port,vsan,initiator_id,target_id,lun,peak_read_io_rate,peak_write_io_rate,peak_read_io_bandwidth,peak_write_io_bandwidth,read_io_completion_time_min,read_io_completion_time_max,write_io_completion_time_min,write_io_completion_time_max,read_io_rate,write_io_rate,read_io_bandwidth,write_io_bandwidth,total_read_io_time,total_write_io_time,total_time_metric_based_read_io_count,total_time_metric_based_write_io_count,read_io_aborts,write_io_aborts,read_io_failures,write_io_failures from fc-scsi.scsi_initiator_itl_flow" 
+                query = "select port,vsan,initiator_id,target_id,lun,peak_read_io_rate,peak_write_io_rate,peak_read_io_bandwidth,peak_write_io_bandwidth,read_io_completion_time_min,read_io_completion_time_max,write_io_completion_time_min,write_io_completion_time_max,read_io_rate,write_io_rate,read_io_bandwidth,write_io_bandwidth,total_read_io_time,total_write_io_time,total_time_metric_based_read_io_count,total_time_metric_based_write_io_count,read_io_aborts,write_io_aborts,read_io_failures,write_io_failures,read_io_timeouts,write_io_timeouts from fc-scsi.scsi_initiator_itl_flow" 
             else:
                 if misc == None:
                     #consider case of args.error also
-                    query = "select port,vsan,initiator_id,target_id,lun, total_read_io_time,total_write_io_time,total_time_metric_based_read_io_count,total_time_metric_based_write_io_count,read_io_aborts,write_io_aborts,read_io_failures,write_io_failures from fc-scsi.scsi_initiator_itl_flow"
+                    query = "select port,vsan,initiator_id,target_id,lun, total_read_io_time,total_write_io_time,total_time_metric_based_read_io_count,total_time_metric_based_write_io_count,read_io_aborts,write_io_aborts,read_io_failures,write_io_failures,read_io_timeouts,write_io_timeouts from fc-scsi.scsi_initiator_itl_flow"
                 else:
-                    query = "select port,vsan,initiator_id,target_id,lun,read_io_rate,write_io_rate,read_io_bandwidth,write_io_bandwidth,total_read_io_time,total_write_io_time,total_time_metric_based_read_io_count,total_time_metric_based_write_io_count,read_io_aborts,write_io_aborts,read_io_failures,write_io_failures from fc-scsi.scsi_initiator_itl_flow" 
+                    query = "select port,vsan,initiator_id,target_id,lun,read_io_rate,write_io_rate,read_io_bandwidth,write_io_bandwidth,total_read_io_time,total_write_io_time,total_time_metric_based_read_io_count,total_time_metric_based_write_io_count,read_io_aborts,write_io_aborts,read_io_failures,write_io_failures,read_io_timeouts,write_io_timeouts from fc-scsi.scsi_initiator_itl_flow" 
 
     if args.target_itl :
         #table_name = 'scsi_target_itl_flow' ; #CSCvn26029 also added 4 line below
@@ -1922,13 +1929,13 @@ def getData(args,misc=None) :
             query = "select port, VSAN, initiator_id, target_id, lun, read_io_rate, write_io_rate, read_io_bandwidth, write_io_bandwidth, read_io_size_min, read_io_size_max, total_time_metric_based_read_io_bytes, total_time_metric_based_read_io_count, write_io_size_min, write_io_size_max, total_time_metric_based_write_io_bytes, total_time_metric_based_write_io_count, read_io_initiation_time_min, read_io_initiation_time_max, total_read_io_initiation_time, write_io_initiation_time_min, write_io_initiation_time_max, total_write_io_initiation_time, read_io_completion_time_min, read_io_completion_time_max, total_read_io_time, write_io_completion_time_min, write_io_completion_time_max, total_write_io_time, read_io_inter_gap_time_min, read_io_inter_gap_time_max, total_read_io_inter_gap_time, write_io_inter_gap_time_min, write_io_inter_gap_time_max, total_write_io_inter_gap_time from fc-scsi.scsi_target_itl_flow"
         else : 
             if args.minmax:
-                query = "select port,vsan,initiator_id,target_id,lun,peak_read_io_rate,peak_write_io_rate,peak_read_io_bandwidth,peak_write_io_bandwidth,read_io_completion_time_min,read_io_completion_time_max,write_io_completion_time_min,write_io_completion_time_max,read_io_rate,write_io_rate,read_io_bandwidth,write_io_bandwidth,total_read_io_time,total_write_io_time,total_time_metric_based_read_io_count,total_time_metric_based_write_io_count,read_io_aborts,write_io_aborts,read_io_failures,write_io_failures from fc-scsi.scsi_target_itl_flow" 
+                query = "select port,vsan,initiator_id,target_id,lun,peak_read_io_rate,peak_write_io_rate,peak_read_io_bandwidth,peak_write_io_bandwidth,read_io_completion_time_min,read_io_completion_time_max,write_io_completion_time_min,write_io_completion_time_max,read_io_rate,write_io_rate,read_io_bandwidth,write_io_bandwidth,total_read_io_time,total_write_io_time,total_time_metric_based_read_io_count,total_time_metric_based_write_io_count,read_io_aborts,write_io_aborts,read_io_failures,write_io_failures,read_io_timeouts,write_io_timeouts from fc-scsi.scsi_target_itl_flow" 
             else:
                 if misc == None:
                     #consider case of errors also
-                    query = "select port,vsan,initiator_id,target_id,lun, total_read_io_time,total_write_io_time,total_time_metric_based_read_io_count,total_time_metric_based_write_io_count,read_io_aborts,write_io_aborts,read_io_failures,write_io_failures from fc-scsi.scsi_target_itl_flow"
+                    query = "select port,vsan,initiator_id,target_id,lun, total_read_io_time,total_write_io_time,total_time_metric_based_read_io_count,total_time_metric_based_write_io_count,read_io_aborts,write_io_aborts,read_io_failures,write_io_failures,read_io_timeouts,write_io_timeouts from fc-scsi.scsi_target_itl_flow"
                 else:
-                    query = "select port,vsan,initiator_id,target_id,lun,read_io_rate,write_io_rate,read_io_bandwidth,write_io_bandwidth,total_read_io_time,total_write_io_time,total_time_metric_based_read_io_count,total_time_metric_based_write_io_count,read_io_aborts,write_io_aborts,read_io_failures,write_io_failures from fc-scsi.scsi_target_itl_flow" 
+                    query = "select port,vsan,initiator_id,target_id,lun,read_io_rate,write_io_rate,read_io_bandwidth,write_io_bandwidth,total_read_io_time,total_write_io_time,total_time_metric_based_read_io_count,total_time_metric_based_write_io_count,read_io_aborts,write_io_aborts,read_io_failures,write_io_failures,read_io_timeouts,write_io_timeouts from fc-scsi.scsi_target_itl_flow" 
     
 
     #query = "select all from fc-scsi." + table_name ; #CSCvn26029
