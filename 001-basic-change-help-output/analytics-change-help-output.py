@@ -2016,6 +2016,8 @@ def getData(args,misc=None) :
 
 def print_util_help(self):
     print '''
+    --- Example 1 - Changed output - Success ---
+
 ShowAnalytics   --errors <options> | --errorsonly <options> | --evaluate-npuload <options> | --help | --info <options> | --minmax <options> | --outstanding-io <options> | --top <options> | --version |  --vsan-thput <options> 
  
  
