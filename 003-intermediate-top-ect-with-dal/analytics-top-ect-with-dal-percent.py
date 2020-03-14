@@ -1667,8 +1667,10 @@ def displayTop(args,json_out,return_vector) :
                     ectW = (totalwrite / writeCount) if writeCount != 0 else 0
                     dalR = (totalreaddal / readCount) if readCount != 0 else 0
                     dalW = (totalwritedal / writeCount) if writeCount != 0 else 0
+                percent_R = str(round(((float(dalR)/float(ectR))*100 if ectR != 0 else 0),2)) + '%'
+                percent_W = str(round(((float(dalW)/float(ectW))*100 if ectW != 0 else 0),2)) + '%'
     
-                a = itl_id + '::' + str(ectR) + '::' + str(ectW) + '::' +str(ectW+ectR) + '::' + str(dalR) + '::' + str(dalW)
+                a = itl_id + '::' + str(ectR) + '::' + str(ectW) + '::' +str(ectW+ectR) + '::' + str(dalR) + '::' + str(dalW) + '::' + percent_R + '::' + percent_W
             metrics.append(a)
 
         json_out = None
@@ -1705,14 +1707,14 @@ def displayTop(args,json_out,return_vector) :
     elif args.key == 'THPUT': 
         col_names = ["PORT" , "VSAN|Initiator|Target|LUN" , "Avg THROUGHPUT"]
     elif args.key == 'ECT':
-        col_names = ["PORT","VSAN|Initiator|Target|LUN" ,"ECT", "DAL"]
+        col_names = ["PORT","VSAN|Initiator|Target|LUN" ,"ECT", "DAL", "% DAL/ECT"]
     t = PrettyTable(col_names)
     line_count = 4
     if args.key == 'THPUT':
         t = PrettyTable(col_names)
         t.add_row([" "," "," Read   |   Write"])
     elif args.key == 'ECT':
-        t.add_row([" "," ","Read  |  Write","Read  |  Write"])
+        t.add_row([" "," ","Read  |  Write","Read  |  Write","Read  |  Write"])
     else:
         t.add_row([" "," ","Read  |  Write"])
     for data in port_metrics :
@@ -1720,8 +1722,8 @@ def displayTop(args,json_out,return_vector) :
             p,v,i,ta,l,r,w,to = data.split('::')
             t.add_row([p,"{}|{}|{}|{}".format(v,i,ta,l),"{0:^11}| {1:^10}".format(thput_conv(r),thput_conv(w))])
         elif args.key == 'ECT':
-            p,v,i,ta,l,r,w,to,rd,wd = data.split('::')
-            t.add_row([p,"{}|{}|{}|{}".format(v,i,ta,l),"{0:>8} |{1:^10}".format(time_conv(r),time_conv(w)),"{0:>8} |{1:^10}".format(time_conv(rd),time_conv(wd))])
+            p,v,i,ta,l,r,w,to,rd,wd,rpercent,wpercent = data.split('::')
+            t.add_row([p,"{}|{}|{}|{}".format(v,i,ta,l),"{0:>8} |{1:^10}".format(time_conv(r),time_conv(w)),"{0:>8} |{1:^10}".format(time_conv(rd),time_conv(wd)),"{0:>8} |{1:^10}".format(rpercent,wpercent)])
         else:
             p,v,i,ta,l,r,w,to = data.split('::')
             t.add_row([p,"{}|{}|{}|{}".format(v,i,ta,l),"{0:^8}|{1:^8}".format(r,w)])
