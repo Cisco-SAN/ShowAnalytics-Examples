@@ -1645,7 +1645,7 @@ def displayTop(args,json_out,return_vector) :
             iter_itl = json_out['values'][str(counter)]
             port,initiator,target,lun = [str(iter_itl.get(unicode(i),'')) for i in ['port','initiator_id','target_id','lun']]
             vsan = str(iter_itl.get(u'vsan',0))
-            read,write,rb,wb,totalread,totalwrite,readCount,writeCount = [int(iter_itl.get(unicode(i),0)) for i in ['read_io_rate','write_io_rate','read_io_bandwidth','write_io_bandwidth','total_read_io_time','total_write_io_time','total_time_metric_based_read_io_count','total_time_metric_based_write_io_count']]
+            read,write,rb,wb,totalread,totalwrite,readCount,writeCount,totalreaddal,totalwritedal = [int(iter_itl.get(unicode(i),0)) for i in ['read_io_rate','write_io_rate','read_io_bandwidth','write_io_bandwidth','total_read_io_time','total_write_io_time','total_time_metric_based_read_io_count','total_time_metric_based_write_io_count','total_read_io_initiation_time','total_write_io_initiation_time']]
     
             counter += 1
             itl_id = port + '::' + vsan + '::' + initiator + '::' + target + '::' + lun
@@ -1654,17 +1654,21 @@ def displayTop(args,json_out,return_vector) :
             elif args.key == 'THPUT':
                 a = itl_id + '::' + str(rb) + '::' +str(wb) + '::' +str(rb+wb)
             elif args.key == 'ECT':
-                pdata[itl_id] = str(readCount) + '::' +str(totalread) + '::' + str(writeCount) + '::' + str(totalwrite)
-                ectR,ectW = 0,0
+                pdata[itl_id] = str(readCount) + '::' +str(totalread) + '::' + str(writeCount) + '::' + str(totalwrite) + '::' + str(totalreaddal) + '::' + str(totalwritedal)
+                ectR,ectW,dalR,dalW = 0,0,0,0
                 if return_vector[2] != None and itl_id in return_vector[2].keys():
-                    rc,tr,wc,tw = [int(i) for i in return_vector[2][itl_id].split('::')]
+                    rc,tr,wc,tw,rdal,wdal = [int(i) for i in return_vector[2][itl_id].split('::')]
                     ectR = abs((tr-totalread)/(rc-readCount)) if rc != readCount else 0
                     ectW = abs((tw-totalwrite)/(wc-writeCount)) if wc != writeCount else 0
+                    dalR = abs((rdal-totalreaddal)/(rc-readCount)) if rc != readCount else 0
+                    dalW = abs((wdal-totalwritedal)/(wc-writeCount)) if wc != writeCount else 0
                 else:
                     ectR = (totalread / readCount) if readCount != 0 else 0
                     ectW = (totalwrite / writeCount) if writeCount != 0 else 0
+                    dalR = (totalreaddal / readCount) if readCount != 0 else 0
+                    dalW = (totalwritedal / writeCount) if writeCount != 0 else 0
     
-                a = itl_id + '::' + str(ectR) + '::' + str(ectW) + '::' +str(ectW+ectR)
+                a = itl_id + '::' + str(ectR) + '::' + str(ectW) + '::' +str(ectW+ectR) + '::' + str(dalR) + '::' + str(dalW)
             metrics.append(a)
 
         json_out = None
@@ -1701,21 +1705,25 @@ def displayTop(args,json_out,return_vector) :
     elif args.key == 'THPUT': 
         col_names = ["PORT" , "VSAN|Initiator|Target|LUN" , "Avg THROUGHPUT"]
     elif args.key == 'ECT':
-        col_names = ["PORT","VSAN|Initiator|Target|LUN" ,"ECT"]
+        col_names = ["PORT","VSAN|Initiator|Target|LUN" ,"ECT", "DAL"]
     t = PrettyTable(col_names)
     line_count = 4
     if args.key == 'THPUT':
         t = PrettyTable(col_names)
         t.add_row([" "," "," Read   |   Write"])
+    elif args.key == 'ECT':
+        t.add_row([" "," ","Read  |  Write","Read  |  Write"])
     else:
         t.add_row([" "," ","Read  |  Write"])
     for data in port_metrics :
-        p,v,i,ta,l,r,w,to = data.split('::')
         if args.key == 'THPUT':
+            p,v,i,ta,l,r,w,to = data.split('::')
             t.add_row([p,"{}|{}|{}|{}".format(v,i,ta,l),"{0:^11}| {1:^10}".format(thput_conv(r),thput_conv(w))])
         elif args.key == 'ECT':
-            t.add_row([p,"{}|{}|{}|{}".format(v,i,ta,l),"{0:>8} |{1:^10}".format(time_conv(r),time_conv(w))])
+            p,v,i,ta,l,r,w,to,rd,wd = data.split('::')
+            t.add_row([p,"{}|{}|{}|{}".format(v,i,ta,l),"{0:>8} |{1:^10}".format(time_conv(r),time_conv(w)),"{0:>8} |{1:^10}".format(time_conv(rd),time_conv(wd))])
         else:
+            p,v,i,ta,l,r,w,to = data.split('::')
             t.add_row([p,"{}|{}|{}|{}".format(v,i,ta,l),"{0:^8}|{1:^8}".format(r,w)])
         line_count += 1
     
@@ -1945,7 +1953,7 @@ def getData(args,misc=None) :
         if args.key == 'THPUT':
            wkey = ['read_io_bandwidth','write_io_bandwidth']
         if args.key == 'ECT':
-           wkey = ['total_time_metric_based_read_io_count','total_time_metric_based_write_io_count','total_read_io_time','total_write_io_time']
+           wkey = ['total_time_metric_based_read_io_count','total_time_metric_based_write_io_count','total_read_io_time','total_write_io_time','total_read_io_initiation_time','total_write_io_initiation_time']
         if not misc:
             query = "select port,vsan,initiator_id,target_id,lun"
             for jj in wkey :
