@@ -81,4 +81,4 @@ ECT (AKA Exchange completion time or IO completion time) is the total time taken
 
 But ECT can still increase without any increase in DAL. If this happens, you can rule out any issues with storage arrays and focus your troubleshooting within the SAN or host. In the above output, notice that DAL is causing less than 1% delay in the overall ECT values for write operations.
 
-![ECT and DAL for Read and Write commands](https://drive.google.com/uc?export=view&id=1XsnmVXxLNhpEHgCNfzmxlnBZfTWdJn7D)
+![](https://github.com/Cisco-SAN/ShowAnalytics-Examples/blob/master/003-intermediate-top-ect-with-dal/scsi_read_write_cmd.jpg)
