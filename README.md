@@ -1,6 +1,4 @@
 
-<![endif]-->
-
 # ShowAnalytics - The first programmable command on Cisco MDS 9000 switches
 
 ShowAnalytics is the first programmable command on Cisco MDS 9000 switches which helps you unleash the power of Cisco SAN Analytics.
