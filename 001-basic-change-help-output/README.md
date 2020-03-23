@@ -14,7 +14,7 @@ Before (using the default ShowAnalytics utility from NX-OS 8.4(1): [analytics.py
     ShowAnalytics   --errors <options> | --errorsonly <options> | --evaluate-npuload <options> | --help | --info <options> | --minmax <options> | --outstanding-io <options> | --top <options> | --version |  --vsan-thput <options>
 
 
-After (using [analytics-change-help-output.py](https://github.com/Cisco-SAN/ShowAnalytics-Examples/blob/master/001-basic-change-help-output/analytics-change-help-output.py):
+After (using [analytics-change-help-output.py](https://github.com/Cisco-SAN/ShowAnalytics-Examples/blob/master/001-basic-change-help-output/analytics-change-help-output.py)):
 
     MDS9718-A# python bootflash:///scripts/analytics-change-help-output.py -h
     
