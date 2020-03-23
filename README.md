@@ -37,8 +37,9 @@ The official documentation has details on the SQL-like raw queries which you nee
 
 ## Notes
 
-1. With great power comes great responsibility. The on-board Python interpreter gives you limit-less options. Do not abuse it. Try not to run infinite for-loop to bring down the switch.
+1. With great power comes great responsibility. The on-board Python interpreter gives you limit-less options. Do not abuse it. Try not to run infinite loops to bring down the switch.
 
 2. Avoid running heavy computations on the switch. Even though CPUs on the latest generation of the switches are powerful, the capacity is still finite. Heavy computations at scale are best implemented on a remote machine using the streaming telemetry.
 
 3. This should be obvious, but Cisco's official support is limited to the ShowAnalytics utility shipped with NX-OS. If the ShowAnalytics utility does not work after your changes, you won't be able to fil a bug with Cisco. You are welcome to open issues on GitHub and someone may try to help you but this is going to be on best-effort basis only. Having said that, this is not rocket science. You can do it.
+4. Before implementing anything new, please check if it already exist in the official version (ShowAnalytics --help) or in the bleeding edge version at https://github.com/Cisco-SAN/ShowAnalytics. Also, it doesn't hurt to ask here (under issues). Do not re-invent a wheel.
