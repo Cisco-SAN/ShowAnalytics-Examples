@@ -3,7 +3,7 @@ If you are trying to make an initial attempt to change the ShowAnalytics utility
 
 The overall workflow should be:
  1. Export the original ShowAnalytics utility [analytics.py](https://github.com/Cisco-SAN/ShowAnalytics-Examples/blob/master/analytics.py) from MDS switch to your development workstation/laptop.
- 2. Edit [analytics.py](https://github.com/Cisco-SAN/ShowAnalytics-Examples/blob/master/analytics.py) using your preferred text editor. Optionally, save the changed file as [analytics-change-help-output.py](https://github.com/Cisco-SAN/ShowAnalytics-Examples/blob/master/basic_1_change_help_output/analytics-change-help-output.py) to avoid any confusion later. This example does this.
+ 2. Edit [analytics.py](https://github.com/Cisco-SAN/ShowAnalytics-Examples/blob/master/analytics.py) using your preferred text editor. Optionally, save the changed file as [analytics-change-help-output.py](https://github.com/Cisco-SAN/ShowAnalytics-Examples/blob/master/001-basic-change-help-output/analytics-change-help-output.py) to avoid any confusion later. This example does this.
  3. Copy the changed file back to the MDS switch.
  4. Verify the changes.
 
@@ -14,7 +14,7 @@ Before (using the default ShowAnalytics utility from NX-OS 8.4(1): [analytics.py
     ShowAnalytics   --errors <options> | --errorsonly <options> | --evaluate-npuload <options> | --help | --info <options> | --minmax <options> | --outstanding-io <options> | --top <options> | --version |  --vsan-thput <options>
 
 
-After (using [analytics-change-help-output.py](https://github.com/Cisco-SAN/ShowAnalytics-Examples/blob/master/basic_1_change_help_output/analytics-change-help-output.py)):
+After (using [analytics-change-help-output.py](https://github.com/Cisco-SAN/ShowAnalytics-Examples/blob/master/001-basic-change-help-output/analytics-change-help-output.py):
 
     MDS9718-A# python bootflash:///scripts/analytics-change-help-output.py -h
     
