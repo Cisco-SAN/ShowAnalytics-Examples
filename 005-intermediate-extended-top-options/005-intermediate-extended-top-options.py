@@ -35,6 +35,11 @@ error_log = []
 analytics_supported_module =  ['DS-X9648-1536K9', 'DS-C9148T-K9-SUP', 'DS-C9396T-K9-SUP', 'DS-C9132T-K9-SUP']
 interface_list = None
 top_count = 10
+top_max_count = 50
+iter_count = 20
+iter_count_max = 10000
+default_refresh_time = 5
+max_refresh_time = 3600
 error_flag = False
 error = dict()
 prev_wid = None
@@ -156,6 +161,9 @@ def clear_previous_lines (number_of_lines):
     * Returns: None
     **********************************************************************************
     '''
+    if not args.clear:
+        return
+
     for _ in xrange(number_of_lines):
         sys.stdout.write("\x1b[1A")
         sys.stdout.write("\x1b[2K")
@@ -601,16 +609,35 @@ def validateArgs (args):
         except:
             print "--limit supports integer value from 1 to {}".format(max_flow_limit)
             return False
+        if (args.limit > int(max_flow_limit)) or (args.limit < 1):
+            print "--limit supports integer value from 1 to {}".format(max_flow_limit)
+            return False
         if args.top:
-            if args.limit <= 10:
+            global top_max_count
+            if args.limit <= top_max_count:
                 global top_count
                 top_count = args.limit
                 args.limit = 20000
             elif args.limit != 20000:
-                print '--top supports maximum limit of 10'
+                print '--top supports maximum limit of ' + (str)(top_max_count)
                 return False
-        if (args.limit > int(max_flow_limit)) or (args.limit < 1):
-            print "--limit supports integer value from 1 to {}".format(max_flow_limit)
+
+    if args.num_count:
+        global iter_count
+        global iter_count_max
+        try:
+            args.num_count = int(args.num_count)
+        except:
+            print "--count supports integer value from 1 to {}".format(iter_count_max)
+            return False
+        if args.top or args.outstanding_io:
+            if args.num_count <= iter_count_max:
+                iter_count = args.num_count
+            else:
+                print '--count supports maximum count of ' + (str)(iter_count_max)
+                return False
+        if (args.num_count > int(iter_count_max)) or (args.num_count < 1):
+            print '--count supports integer value from 1 to {}'.format(iter_count_max)
             return False
 
     if args.key:
@@ -710,10 +737,17 @@ def validateArgs (args):
             return False
 
     if args.refresh:
-        if not args.outstanding_io:
-            print '--refresh is only supported with --outstanding-io'
+        try:
+            args.refresh = int(args.refresh)
+        except:
+            print "--refresh supports integer values between {} and {}".format(default_refresh_time, max_refresh_time)
             return False
-
+        if (args.refresh < default_refresh_time) or (args.refresh > max_refresh_time):
+            print "--refresh supports integer values between {} and {}".format(default_refresh_time, max_refresh_time)
+            return False
+        if not (args.outstanding_io or args.top):
+            print '--refresh is only supported with --outstanding-io and --top'
+            return False
 
     return True
 
@@ -1924,7 +1958,7 @@ def displayTop(args,json_out, return_vector, ver=None):
     *           - json_out is the json data returned by switch as response for querry
     *           - return_vector is the list of 3 elements described as [<lines to be deleted before printing new iteration result> <time to sleep between 2 iteration> <data from previous iteration>]
     *           - ver is software version of switch
-    * Action: Displays top 10 ITLs based on the key provided via args global object, by default key is ECT
+    * Action: Displays top n ITLs based on the key provided via args global object, by default key is ECT
     * Returns: return_vector is the same one as described in Input
     **********************************************************************************
     '''
@@ -2506,10 +2540,10 @@ OPTIONS :
                               Args :  [--interface <interface>] [--initiator <initiator_fcid>] [--target <target_fcid>]d>] [--alias] [--limit <itl_limit>]
  
  --outstanding-io         Provides Outstanding io per ITL for an interface
-                          Args : [--interface <interface>] [--initiator <initiator_fcid>] [--target <target_fcid>] [--lun <lun_id>] [--limit] [--refresh]
+                          Args : [--interface <interface>] [--initiator <initiator_fcid>] [--target <target_fcid>] [--lun <lun_id>] [--limit] [--refresh t] [--count n]
  
  --top                    Provides top ITLs based on key. Default key is IOPS
-                          Args : [--interface <interface>] [--initiator <initiator_fcid>] [--target <target_fcid>] [--lun <lun_id>] [--limit] [--key <IOPS|THPUT|ECT>] [--progress] [--alias]
+                          Args : [--interface <interface>] [--initiator <initiator_fcid>] [--target <target_fcid>] [--lun <lun_id>] [--limit] [--key <IOPS|THPUT|ECT>] [--progress] [--alias] [--refresh t] [--count n]
 
  --version                Provides version details of this utility
 
@@ -2527,12 +2561,14 @@ ARGUMENTS:
       --lun               <lun_id>            Specifies LUN ID in the format XXXX-XXXX-XXXX-XXXX
       --module            <mod1,mod2>         Specifies module list for --evaluate-npuload option example 1,2
       --progress                              Provides progress for --top option. Should not be used on console
-      --refresh                               Refreshes output of --outstanding-io
+      --refresh           <t>                 Refreshes output of --outstanding-io and --top every t seconds. Default = {refresh_time}
+      --clear                                 Clears the screen before the next output with --outstanding-io and --top
+      --count             <n>                 Stop --top and --outstanding-io after this count
       --target            <target_fcid>       Specifies target FCID in the format 0xDDAAPP
       --vsan              <vsan_number>       Specifies vsan number
 
 Note: --interface can take range of interfaces in case of --evaluate-npuload and port-channel only in case of --vsan-thput
-'''.format(flow_limit=max_flow_limit)
+'''.format(flow_limit=max_flow_limit, refresh_time=default_refresh_time)
     return True
 
 argparse.ArgumentParser.print_help = print_util_help
@@ -2562,7 +2598,9 @@ parser.add_argument('--top', action="store_true",help='Display Top ITL based on 
 parser.add_argument('--key', dest="key",help='iops or thput or ect | --top mandatory')
 parser.add_argument('--progress', action="store_true",help="Show progress")
 parser.add_argument('--outstanding-io', action="store_true",help=' To display outstanding io per interface')
-parser.add_argument('--refresh', action="store_true",help='Auto refresh')
+parser.add_argument('--refresh', dest="refresh",help='Refreshes output of --outstanding-io and --top every refresh seconds. Default = {}'.format(default_refresh_time),default=default_refresh_time)
+parser.add_argument('--clear', action="store_true",help='Clear the screen before next output')
+parser.add_argument('--count', dest="num_count", help='Stop --top and --outstanding-io after this count. Default = {}'.format(iter_count), default=iter_count)
 #parser.add_argument('--intlist',dest="intlist", help='int_list')
 
 args = parser.parse_args()
@@ -2611,17 +2649,24 @@ else :
         displayVsanOverlay(json_out, ver=sw_ver)
 
     elif args.top:
-        return_vector = displayTop(args, json_out, [None,2,None], ver=sw_ver)
-        while (not(return_vector[0] is None  and return_vector[2] is None) ):
+        count = 1
+        print 'Count:{}. {} more to go, every (at least) {} seconds.'.format(count,(iter_count - count), args.refresh)
+        return_vector = displayTop(args, json_out, [None,args.refresh,None], ver=sw_ver)
+        while (not(return_vector[0] is None  and return_vector[2] is None) and count < iter_count):
             json_out = getData(args, ver=sw_ver)
             if not json_out:
                 json_out = ' '
+            count = count + 1
+            print 'Count:{}. {} more to go.'.format(count,(iter_count - count))
             return_vector = displayTop(args, json_out, return_vector, ver=sw_ver)
     elif args.outstanding_io:
-        return_vector = displayOutstandingIo(json_out, [None, 1, None], ver=sw_ver)
-        if args.refresh:
-            while (not(return_vector[0] is None  and return_vector[2] is None) ):
-                json_out = getData(args, ver=sw_ver)
-                if not json_out:
-                    json_out = ' '
-                return_vector = displayOutstandingIo(json_out, return_vector, ver=sw_ver)
+        count = 1
+        print 'Count:{}. {} more to go, every (at least) {} seconds.'.format(count,(iter_count - count), args.refresh)
+        return_vector = displayOutstandingIo(json_out, [None, args.refresh, None], ver=sw_ver)
+        while (not(return_vector[0] is None  and return_vector[2] is None) and count < iter_count):
+            json_out = getData(args, ver=sw_ver)
+            if not json_out:
+                json_out = ' '
+            count = count + 1
+            print 'Count:{}. {} more to go.'.format(count,(iter_count - count))
+            return_vector = displayOutstandingIo(json_out, return_vector, ver=sw_ver)
